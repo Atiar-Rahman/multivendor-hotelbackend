@@ -6,7 +6,7 @@ from users.permissions import IsSuperAdminOrReadOnly,IsUpperLevelRestricted
 from rest_framework.response import Response
 from .serializers import MeSerializer
 from django.db import models
-
+from rest_framework.decorators import action
 
 class MeViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -74,3 +74,28 @@ class UserViewSet(viewsets.ModelViewSet):
         # GUEST → only self
         return User.objects.filter(id=user.id)
     
+
+    @action(detail=True, methods=['post'], url_path='update-role')
+    def update_role(self, request, pk=None):
+        user = self.get_object()  # gets the User filtered by get_queryset()
+        
+        # Only SUPER_ADMIN can update roles
+        if request.user.role != User.Role.SUPER_ADMIN:
+            return Response(
+                {"detail": "Only super admins can change roles."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        new_role = request.data.get('role')
+        if new_role not in [role for role, _ in User.Role.choices]:
+            return Response(
+                {"detail": "Invalid role."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.role = new_role
+        user.save()
+        return Response(
+            {"id": user.id, "role": user.role}, 
+            status=status.HTTP_200_OK
+        )
