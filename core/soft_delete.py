@@ -29,7 +29,7 @@ class DeleteObjectsManager(models.Manager):
 class SoftDeleteModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    is_deleted = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True,blank=True)
     deleted_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_%(class)ss")
     
