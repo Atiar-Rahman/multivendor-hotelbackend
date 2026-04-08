@@ -59,3 +59,37 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 
+
+class UserRoleUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id','email','role']
+        read_only_fields = ['email']
+
+    def validate_role(self, value):
+        requester = self.context.get('request').user  # user making the request
+        user_to_update = self.instance  # user whose role is being changed
+
+        # Prevent changing own role
+        if user_to_update.id == requester.id:
+            raise serializers.ValidationError("You cannot change your own role.")
+
+        # SUPER_ADMIN can do anything
+        if requester.role == User.Role.SUPER_ADMIN:
+            return value
+
+        # VENDOR_ADMIN restrictions
+        if requester.role == User.Role.VENDOR_ADMIN:
+            # Cannot assign SUPER_ADMIN
+            if value == User.Role.SUPER_ADMIN:
+                raise serializers.ValidationError("Vendor admins cannot assign SUPER_ADMIN role.")
+
+            # Cannot change own role
+            if user_to_update.id == requester.id:
+                raise serializers.ValidationError("You cannot change your own role.")
+
+            # Otherwise allowed
+            return value
+
+        # Other roles cannot change roles
+        raise serializers.ValidationError("You do not have permission to change roles.")
